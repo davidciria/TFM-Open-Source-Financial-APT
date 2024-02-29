@@ -6,3 +6,6 @@ source venv/bin/activate
 pip freeze > requirements.txt
 # Install packages from requirements.txt
 pip install -r requirements.txt
+
+# GraphiQL IDE
+https://github.com/graphql/graphiql.git
