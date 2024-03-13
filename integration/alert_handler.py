@@ -5,10 +5,11 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from socketserver import BaseServer
 from alert_interpreter import JSONAlertInterpreter
 from datetime import datetime
 import logging
+
+server_port = 8080
 
 logging.basicConfig(
     filename="requests.log", level=logging.INFO, format="%(asctime)s - %(message)s"
@@ -17,6 +18,15 @@ json_alert_interpreter = JSONAlertInterpreter()
 
 
 class JSONRequestHandler(BaseHTTPRequestHandler):
+
+    
+    def do_GET(self):
+        if self.path == "/":
+            self.handle_hello_get()
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Not Found")
 
     def do_POST(self):
         if self.path == "/interpret":
@@ -93,33 +103,68 @@ class JSONRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"Invalid JSON data")
 
-    def do_GET(self):
-        if self.path == "/hello":
-            self.handle_hello_get()
-        else:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Not Found")
-
     def handle_hello_get(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        html_content = """
+
+        script = """
+            <script>
+                let add_schema_req = {
+                    "use_case_id": "example_id",
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "attack_type"
+                        ],
+                        "properties": {
+                            "attack_type": {
+                                "type": "string",
+                                "enum": [
+                                    "phishing"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+                document.getElementById("add_schema_req").textContent = JSON.stringify(add_schema_req, undefined, 2);
+            </script>
+        """
+
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Root Page</title>
+            <title>Alert Handler</title>
         </head>
         <body>
-            <h1>Welcome to the Root Page!</h1>
+            <h1>Welcome to alert handler!</h1>
+            <p>HTTP server that read webhooks alerts send by the SIEM</p>
+            <h2>Routes</h2>
+
+            <h3>Add schema</h3>
+            <div><strong>POST</strong> http://localhost:{server_port}/add_schema</div>
+            <h4>Example request</h4>
+            <div style="background: black; color: white; padding: 5px; display: inline-block;">
+            <pre style="margin:0" id="add_schema_req">
+            </pre>
+            </div>
+            <h4>Example response</h4>
+
+            <h3>Interpret Alert</h3>
+            <div><strong>POST</strong> http://localhost:{server_port}/interpret</div>
+            <h4>Example request</h4>
+            <h4>Example response</h4>
+
+            {script}
         </body>
         </html>
         """
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
 
 
-def run_server(port=8080):
+def run_server(port=server_port):
     server_address = ("", port)
     httpd = HTTPServer(server_address, JSONRequestHandler)
     print(f"Starting server on port {port}...")
