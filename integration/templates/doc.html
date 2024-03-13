@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Alert Handler</title>
+</head>
+
+<body>
+    <h1>Alert Handler Documentation</h1>
+    <p>HTTP server that read webhooks alerts send by the SIEM</p>
+    <h2>Routes</h2>
+
+    <h3 style="background-color: #5a5a5a; color: white;">Add schema</h3>
+    <div><strong>POST</strong> http://{{request_host}}/add_schema</div>
+    <div style="margin-top: 10px;">Add schema to the interpreter. You should follow syntax specified <a href="https://json-schema.org/specification">here</a>.</div>
+    <h4>Example request</h4>
+    <div style="background: black; color: white; padding: 5px; display: inline-block;">
+        <pre style="margin:0" id="add_schema_req">
+        </pre>
+    </div>
+    <h4>Example response</h4>
+    <div style="background: black; color: white; padding: 5px; display: inline-block;">
+        <pre style="margin:0" id="add_schema_res">
+        </pre>
+    </div>
+
+    <h3 style="background-color: #5a5a5a; color: white;">Interpret Alert</h3>
+    <div><strong>POST</strong> http://{{request_host}}/interpret</div>
+    <h4>Example request</h4>
+    <div style="background: black; color: white; padding: 5px; display: inline-block;">
+        <pre style="margin:0" id="interpret_req">
+        </pre>
+    </div>
+    <h4>Example response</h4>
+    <div style="background: black; color: white; padding: 5px; display: inline-block;">
+        <pre style="margin:0" id="interpret_res">
+        </pre>
+    </div>
+
+    <script>
+        let add_schema_req = {
+            "use_case_id": "example_id",
+            "schema": {
+                "type": "object",
+                "required": [
+                    "attack_type"
+                ],
+                "properties": {
+                    "attack_type": {
+                        "type": "string",
+                        "enum": [
+                            "phishing"
+                        ]
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+        document.getElementById("add_schema_req").textContent = JSON.stringify(add_schema_req, undefined, 2);
+
+        let add_schema_res = {
+            "message": "Schema added succesfully",
+            "status": "200"
+        }
+        document.getElementById("add_schema_res").textContent = JSON.stringify(add_schema_res, undefined, 2);
+
+
+        let interpret_req = {
+            "attack_type": "phishing"
+        }
+        document.getElementById("interpret_req").textContent = JSON.stringify(interpret_req, undefined, 2);
+
+        let interpret_res = {
+            "alert_received": {
+                "attack_type": "phishing"
+            },
+            "use_cases": [
+                "phishing_attack"
+            ]
+        }
+        document.getElementById("interpret_res").textContent = JSON.stringify(interpret_res, undefined, 2);
+    </script>
+</body>
+
+</html>
