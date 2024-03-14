@@ -58,4 +58,4 @@ class JSONAlertInterpreter(AlertInterpreter):
                 except:
                     pass
 
-        return list(use_case_ids)
+        return list(set(use_case_ids))
