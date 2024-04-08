@@ -16,6 +16,16 @@ class AlertInterpreter(ABC):
     def add_schema(self, schema, use_case_id) -> None:
         pass
 
+    # Remove a schema template associated to a use case.
+    @abstractmethod
+    def remove_schema(self, schema, use_case_id) -> None:
+        pass
+
+    # Remove a schema template associated to a use case.
+    @abstractmethod
+    def remove_all_schemas(self) -> None:
+        pass
+
     # Interpret a payload and try to identify the associated use_case_id. If use_case_id not found return None.
     @abstractmethod
     def interpret(self, payload) -> str:
@@ -45,6 +55,18 @@ class JSONAlertInterpreter(AlertInterpreter):
         else:
             self.use_case_id_schemas[use_case_id] = [schema]
         
+        return True
+    
+    def remove_schema(self, schema, use_case_id) -> None:
+        if use_case_id in self.use_case_id_schemas:
+            self.use_case_id_schemas[use_case_id].remove(schema)
+        else:
+            print(f"Use case id {use_case_id} not found.")
+        
+        return True
+    
+    def remove_all_schemas(self) -> None:
+        self.use_case_id_schemas = {}
         return True
 
     def interpret(self, payload) -> str:

@@ -106,58 +106,6 @@ class VectrQueries:
         return res['data']['testcase']
 
 
-vectr_queries = VectrQueries(vectr_session, url)
-
-databases = vectr_queries.list_databases()
-for i,d in enumerate(databases): print(f"{i + 1}. {d['name']}")
-db_in = input('Choose database : ')
-db_name = databases[int(db_in) - 1]['name']
-
-assesments = vectr_queries.list_assessments(db_name)
-for i,d in enumerate(assesments): print(f"{i + 1}. {d['name']}")
-ass_in = input('Choose assessment : ')
-ass_id = assesments[int(ass_in) - 1]['id']
-
-campaings = vectr_queries.list_campaings(db_name, ass_id)
-campaings = sorted(campaings, key=lambda x: x['offset'])
-for i,d in enumerate(campaings): print(f"{i + 1}. {d['name']}")
-campaing_in = input("Choose campaing: ")
-campaing_id = campaings[int(campaing_in) - 1]['id']
-
-test_cases = vectr_queries.list_test_cases(db_name, campaing_id)
-print("\nTest cases: ")
-test_case_detect_schema = {}
-print("\n**** Loading test case detection schemas ****")
-for i,d in enumerate(test_cases): 
-   name = d['name']
-   id  = d['id']
-   detection_guidance = d['detectionGuidance']
-
-   print(f"""
-Name: {name}
-ID: {id}""")
-   
-   for dg in detection_guidance:
-      if "json_schema" in dg:
-        payload = dg[len('json_schema:'):].replace("\n", "").replace(" ", "")
-        try:
-            json_schema = json.loads(payload)
-            print("JSON schema loaded for test case: ", id)
-        except json.JSONDecodeError as e:
-            print("Invalid JSON schema for test case: ", id)
-            continue
-
-        if id not in test_case_detect_schema:
-            test_case_detect_schema[id] = [json_schema]
-        else:
-            test_case_detect_schema[id].append(json_schema)
-
-print("\n**** Test case detection schemas ****")
-for k,v in test_case_detect_schema.items():
-    print(f"\nTest case ID: {k}")
-    for d in v: print(f"· {d}")
-
-
 class VectrMutations:
     def __init__(self, vectr_session, url) -> None:
         self.vectr_session = vectr_session
@@ -212,18 +160,71 @@ class VectrMutations:
         res, status = self.grapgql_query(update_test_case_outcome)
         print(res)
         return res['data']['testCase']['update']['testCases'][0]
-    
 
-vectr_mutations = VectrMutations(vectr_session, url)
-test_case_id = "fe75e1ef-09eb-4511-88a7-35a227e21f4a"
-res = vectr_mutations.update_test_case_outcome(test_case_id, "Alerted")
 
-test_case = vectr_queries.get_test_case(db_name, test_case_id)
-outcome_notes = test_case['outcomeNotes']
+def load_detection_schemas():
+    vectr_queries = VectrQueries(vectr_session, url)
 
-print(outcome_notes)
+    databases = vectr_queries.list_databases()
+    for i,d in enumerate(databases): print(f"{i + 1}. {d['name']}")
+    db_in = input('Choose database : ')
+    db_name = databases[int(db_in) - 1]['name']
 
-test_case_detected = json.dumps(test_case_detect_schema[test_case_id][0])
-updated_outcome_notes = outcome_notes + "\n\nDetected json schema ({}):\n{}".format(datetime.now(pytz.utc), test_case_detected)
+    assesments = vectr_queries.list_assessments(db_name)
+    for i,d in enumerate(assesments): print(f"{i + 1}. {d['name']}")
+    ass_in = input('Choose assessment : ')
+    ass_id = assesments[int(ass_in) - 1]['id']
 
-res = vectr_mutations.update_test_case_outcome_notes(test_case_id, updated_outcome_notes.replace("\n", "\\n").replace('"', '\\"'))
+    campaings = vectr_queries.list_campaings(db_name, ass_id)
+    campaings = sorted(campaings, key=lambda x: x['offset'])
+    for i,d in enumerate(campaings): print(f"{i + 1}. {d['name']}")
+    campaing_in = input("Choose campaing: ")
+    campaing_id = campaings[int(campaing_in) - 1]['id']
+
+    test_cases = vectr_queries.list_test_cases(db_name, campaing_id)
+    print("\nTest cases: ")
+    test_case_detect_schemas = {}
+    print("\n**** Loading test case detection schemas ****")
+    for i,d in enumerate(test_cases): 
+        name = d['name']
+        id  = d['id']
+        detection_guidance = d['detectionGuidance']
+
+        print(f"""
+        Name: {name}
+        ID: {id}""")
+        
+        for dg in detection_guidance:
+            if "json_schema" in dg:
+                payload = dg[len('json_schema:'):].replace("\n", "").replace(" ", "")
+                try:
+                    json_schema = json.loads(payload)
+                    print("JSON schema loaded for test case: ", id)
+                except json.JSONDecodeError as e:
+                    print("Invalid JSON schema for test case: ", id)
+                    continue
+
+                if id not in test_case_detect_schemas:
+                    test_case_detect_schemas[id] = [json_schema]
+                else:
+                    test_case_detect_schemas[id].append(json_schema)
+
+    print("\n**** Test case detection schemas ****")
+    for k,v in test_case_detect_schemas.items():
+        print(f"\nTest case ID: {k}")
+        for d in v: print(f"· {d}")
+
+    return test_case_detect_schemas, db_name
+
+def mark_test_case_as_alert_detected(test_case_id, test_case_detect_schemas, db_name):
+    vectr_mutations = VectrMutations(vectr_session, url)
+    res = vectr_mutations.update_test_case_outcome(test_case_id, "Alerted")
+    vectr_queries = VectrQueries(vectr_session, url)
+
+    test_case = vectr_queries.get_test_case(db_name, test_case_id)
+    outcome_notes = test_case['outcomeNotes']
+
+    test_case_detected = json.dumps(test_case_detect_schemas[test_case_id][0])
+    updated_outcome_notes = outcome_notes + "\n\nDetected json schema ({}):\n{}".format(datetime.now(pytz.utc), test_case_detected)
+
+    res = vectr_mutations.update_test_case_outcome_notes(test_case_id, updated_outcome_notes.replace("\n", "\\n").replace('"', '\\"'))

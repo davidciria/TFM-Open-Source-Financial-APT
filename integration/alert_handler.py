@@ -4,9 +4,12 @@
 # HTTP server that read webhooks alerts send by the SIEM
 
 from flask import Flask, request, jsonify, render_template
+import threading
 from datetime import datetime
 from alert_interpreter import JSONAlertInterpreter
 import logging
+from vectr_graphql import load_detection_schemas, mark_test_case_as_alert_detected
+import time
 
 app = Flask(__name__)
 
@@ -50,6 +53,8 @@ def handle_interpret():
         json_data = request.get_json()
         print(f"Alert received: {json_data}")
         use_cases = json_alert_interpreter.interpret(json_data)
+        for uc in use_cases:
+            mark_test_case_as_alert_detected(uc, test_case_detect_schemas, db_name)
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_event = {"alert_received": json_data, "use_cases": use_cases}
@@ -60,13 +65,34 @@ def handle_interpret():
     except Exception as e:
         return "Invalid JSON data", 400
 
+def menu():
+    while True:
+        time.sleep(2)
+        print("Menu:")
+        print("1. Load other campaign")
+        print("2. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            json_alert_interpreter.remove_all_schemas()
+            test_case_detect_schemas, db_name = load_detection_schemas()
+            for k,v in test_case_detect_schemas.items():
+                for d in v:
+                    json_alert_interpreter.add_schema(d, k)
+        elif choice == '2':
+            print("Exiting...")
+            exit(0)
+        else:
+            print("Invalid choice.")
 
 if __name__ == "__main__":
-    schema = {
-        "type": "object",
-        "required": ["attack_type"],
-        "properties": {"attack_type": {"type": "string", "enum": ["phishing"]}},
-        "additionalProperties": False,
-    }
-    json_alert_interpreter.add_schema(schema, "phishing_attack")
+    test_case_detect_schemas, db_name = load_detection_schemas()
+    for k,v in test_case_detect_schemas.items():
+        for d in v:
+            json_alert_interpreter.add_schema(d, k)
+
+    # Create a thread for the menu
+    menu_thread = threading.Thread(target=menu)
+    menu_thread.start()
+
     app.run(port=8080)
