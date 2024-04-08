@@ -69,7 +69,7 @@ def menu():
     while True:
         time.sleep(2)
         print("Menu:")
-        print("1. Load other campaign")
+        print("1. Change assesment")
         print("2. Exit")
         choice = input("Enter your choice: ")
 
@@ -80,8 +80,7 @@ def menu():
                 for d in v:
                     json_alert_interpreter.add_schema(d, k)
         elif choice == '2':
-            print("Exiting...")
-            exit(0)
+            print("Press control + c to exit the application.")
         else:
             print("Invalid choice.")
 
