@@ -7,7 +7,7 @@ import pytz
 
 # Define the URL of your GraphQL endpoint
 url = 'https://127.0.0.1:8081/sra-purpletools-rest/graphql'  # Replace 'https://example.com/graphql' with your actual GraphQL API endpoint
-auth_token = '' # "VEC1 access_key:secret_key" format.
+auth_token = 'VEC1 KKTG8MSLZRI04KQRATHWSQ:YTQdoU5XmKUIaXsZEi7uZePyrgNFUwRK0eMETSHDOFM=' # "VEC1 access_key:secret_key" format.
 
 vectr_session = requests.Session()
 vectr_session.verify = False
@@ -122,11 +122,11 @@ class VectrMutations:
         
         return response.json(), response.status_code
     
-    def update_test_case_outcome(self, test_case_id, outcome):
+    def update_test_case_outcome(self, test_case_id, outcome, fs_db):
         update_test_case_outcome = '''
         mutation {{
             testCase{{
-                update(input: {{db: "FS_THREAT_INDEX", testCaseUpdates: [{{testCaseId: "{test_case_id}", outcome: "{outcome}"}}]}}){{
+                update(input: {{db: "{fs_db}", testCaseUpdates: [{{testCaseId: "{test_case_id}", outcome: "{outcome}"}}]}}){{
                     testCases {{
                         id,
                         outcome{{
@@ -136,16 +136,16 @@ class VectrMutations:
                 }}
             }}
         }}
-        '''.format(test_case_id=test_case_id, outcome=outcome)
+        '''.format(fs_db=fs_db, test_case_id=test_case_id, outcome=outcome)
 
         res, status = self.grapgql_query(update_test_case_outcome)
         return res['data']['testCase']['update']['testCases'][0]
     
-    def update_test_case_outcome_notes(self, test_case_id, outcome_notes):
+    def update_test_case_outcome_notes(self, test_case_id, outcome_notes, fs_db):
         update_test_case_outcome = '''
         mutation {{
             testCase{{
-                update(input: {{db: "FS_THREAT_INDEX", testCaseUpdates: [{{testCaseId: "{test_case_id}", outcomeNotes: "{outcome_notes}"}}]}}){{
+                update(input: {{db: "{fs_db}", testCaseUpdates: [{{testCaseId: "{test_case_id}", outcomeNotes: "{outcome_notes}"}}]}}){{
                     testCases {{
                         id,
                         outcome{{
@@ -155,7 +155,7 @@ class VectrMutations:
                 }}
             }}
         }}
-        '''.format(test_case_id=test_case_id, outcome_notes=outcome_notes)
+        '''.format(fs_db=fs_db, test_case_id=test_case_id, outcome_notes=outcome_notes)
 
         res, status = self.grapgql_query(update_test_case_outcome)
         print(res)
@@ -220,7 +220,7 @@ def load_detection_schemas():
 
 def mark_test_case_as_alert_detected(test_case_id, test_case_detect_schemas, db_name):
     vectr_mutations = VectrMutations(vectr_session, url)
-    res = vectr_mutations.update_test_case_outcome(test_case_id, "Alerted")
+    res = vectr_mutations.update_test_case_outcome(test_case_id, "Alerted", db_name)
     vectr_queries = VectrQueries(vectr_session, url)
 
     test_case = vectr_queries.get_test_case(db_name, test_case_id)
@@ -229,4 +229,4 @@ def mark_test_case_as_alert_detected(test_case_id, test_case_detect_schemas, db_
     test_case_detected = json.dumps(test_case_detect_schemas[test_case_id][0])
     updated_outcome_notes = outcome_notes + "\n\nDetected json schema ({}):\n{}".format(datetime.now(pytz.utc), test_case_detected)
 
-    res = vectr_mutations.update_test_case_outcome_notes(test_case_id, updated_outcome_notes.replace("\n", "\\n").replace('"', '\\"'))
+    res = vectr_mutations.update_test_case_outcome_notes(test_case_id, updated_outcome_notes.replace("\n", "\\n").replace('"', '\\"'), db_name)
