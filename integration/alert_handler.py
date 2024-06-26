@@ -69,7 +69,7 @@ def menu():
     while True:
         time.sleep(2)
         print("Menu:")
-        print("1. Change assesment")
+        print("1. Change campaign")
         print("2. Exit")
         choice = input("Enter your choice: ")
 

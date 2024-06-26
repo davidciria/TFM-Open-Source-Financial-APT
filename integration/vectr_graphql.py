@@ -177,39 +177,39 @@ def load_detection_schemas():
 
     campaings = vectr_queries.list_campaings(db_name, ass_id)
     campaings = sorted(campaings, key=lambda x: x['offset'])
-    # for i,d in enumerate(campaings): print(f"{i + 1}. {d['name']}")
-    # campaing_in = input("Choose campaing: ")
-    # campaing_id = campaings[int(campaing_in) - 1]['id']
+    for i,d in enumerate(campaings): print(f"{i + 1}. {d['name']}")
+    campaing_in = input("Choose campaing: ")
+    campaing_id = campaings[int(campaing_in) - 1]['id']
 
-    for c in campaings:
-        campaing_id = c['id']
-        test_cases = vectr_queries.list_test_cases(db_name, campaing_id)
-        print("\nTest cases: ")
-        test_case_detect_schemas = {}
-        print("\n**** Loading test case detection schemas ****")
-        for i,d in enumerate(test_cases): 
-            name = d['name']
-            id  = d['id']
-            detection_guidance = d['detectionGuidance']
+    # for c in campaings:
+    #     campaing_id = c['id']
+    test_cases = vectr_queries.list_test_cases(db_name, campaing_id)
+    print("\nTest cases: ")
+    test_case_detect_schemas = {}
+    print("\n**** Loading test case detection schemas ****")
+    for i,d in enumerate(test_cases): 
+        name = d['name']
+        id  = d['id']
+        detection_guidance = d['detectionGuidance']
 
-            print(f"""
-            Name: {name}
-            ID: {id}""")
-            
-            for dg in detection_guidance:
-                if "json_schema" in dg:
-                    payload = dg[len('json_schema:'):].replace("\n", "").replace(" ", "")
-                    try:
-                        json_schema = json.loads(payload)
-                        print("JSON schema loaded for test case: ", id)
-                    except json.JSONDecodeError as e:
-                        print("Invalid JSON schema for test case: ", id)
-                        continue
+        print(f"""
+        Name: {name}
+        ID: {id}""")
+        
+        for dg in detection_guidance:
+            if "json_schema" in dg:
+                payload = dg[len('json_schema:'):].replace("\n", "").replace(" ", "")
+                try:
+                    json_schema = json.loads(payload)
+                    print("JSON schema loaded for test case: ", id)
+                except json.JSONDecodeError as e:
+                    print("Invalid JSON schema for test case: ", id)
+                    continue
 
-                    if id not in test_case_detect_schemas:
-                        test_case_detect_schemas[id] = [json_schema]
-                    else:
-                        test_case_detect_schemas[id].append(json_schema)
+                if id not in test_case_detect_schemas:
+                    test_case_detect_schemas[id] = [json_schema]
+                else:
+                    test_case_detect_schemas[id].append(json_schema)
 
     print("\n**** Test case detection schemas ****")
     for k,v in test_case_detect_schemas.items():
